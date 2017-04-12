@@ -11,10 +11,10 @@ from setuptools import setup, Extension
 ########################################################################
 ########################################################################
 # collect camprot version
-sys.path.insert(0, os.path.dirname(__file__))
-import version
+def getVersion():
+    return "0.0.6"
 
-version = version.__version__
+version = getVersion()
 
 ###############################################################
 ###############################################################
