@@ -12,7 +12,7 @@ from setuptools import setup, Extension
 ########################################################################
 # collect camprot version
 def getVersion():
-    return "0.0.11"
+    return "0.0.12"
 
 version = getVersion()
 
@@ -72,7 +72,7 @@ setup(
     # dependencies
     install_requires=install_requires,
     entry_points={
-        'console_scripts': ['annotate_rnp = camprot.scripts.annotate_rnp:main']
+        'console_scripts': ['camprot = camprot.camprot:main']
     },
     # other options
     zip_safe=False,
