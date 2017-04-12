@@ -11,7 +11,7 @@ from setuptools import setup, find_packages, Extension
 ########################################################################
 ########################################################################
 # collect camprot version
-#sys.path.insert(0, "camprot")
+sys.path.append(os.path.join(os.path.dirname(__file__), "lib"))
 import version
 
 version = version.__version__
