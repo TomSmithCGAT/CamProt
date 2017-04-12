@@ -12,7 +12,7 @@ from setuptools import setup, Extension
 ########################################################################
 # collect camprot version
 def getVersion():
-    return "0.0.8"
+    return "0.0.9"
 
 version = getVersion()
 
@@ -28,12 +28,6 @@ if (major == 2 and minor1 < 7) or major < 2:
 
 camprot_packages = ["camprot"]
 camprot_package_dirs = {'camprot': 'camprot'}
-
-# debugging pip installation
-#install_requires = []
-#for requirement in (
-#        l.strip() for l in open('requirements.txt') if not l.startswith("#")):
-#    install_requires.append(requirement)
 
 install_requires = [
     "urllib3>=1.0",
@@ -78,7 +72,7 @@ setup(
     # dependencies
     install_requires=install_requires,
     entry_points={
-        'console_scripts': ['annotate_rnp = annotate_rnp:main']
+        'console_scripts': ['annotate_rnp = camprot.scripts.annotate_rnp:main']
     },
     # other options
     zip_safe=False,
