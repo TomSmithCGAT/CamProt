@@ -6,13 +6,13 @@ from ez_setup import use_setuptools
 use_setuptools("10.0")
 import setuptools
 
-from setuptools import setup, find_packages, Extension
+from setuptools import setup, Extension
 
 ########################################################################
 ########################################################################
 # collect camprot version
-sys.path.append(os.path.join(os.path.dirname(__file__), "lib"))
-from lib import version
+sys.path.append(os.path.dirname(__file__))
+import version
 
 version = version.__version__
 
@@ -72,7 +72,8 @@ setup(
     url="https://github.com/TomSmithCGAT/CamProt",
     download_url="https://github.com/TomSmithCGAT/CamProt/tarball/%s" % version,
     # package contents
-    packages=find_packages(),
+    packages=camprot_packages,
+    package_dir=camprot_package_dirs,
     include_package_data=True,
     # dependencies
     install_requires=install_requires,
