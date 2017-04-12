@@ -265,30 +265,31 @@ def writeSectionHeader(logfile, section_header):
 def main(argv=sys.argv):
 
     parser = argparse.ArgumentParser(
-        argv, usage=__doc__,
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        argv, usage=__doc__)
 
-    parser.add_argument('-i', '--infile', dest="infile", required=True,
-                        help="")
+    optional = parser.add_argument_group('optional arguments')
+    required = parser.add_argument_group('required arguments')
 
-    parser.add_argument('-f', '--fasta-db', dest="fasta_db", required=True,
-                        help="")
+    required.add_argument('-i', '--infile', dest="infile", required=True,
+                          help="")
 
-    parser.add_argument('-fc', '--fasta-crap-db', dest="fasta_crap_db",
-                        required=True, help="")
+    required.add_argument('-f', '--fasta-db', dest="fasta_db", required=True,
+                          help="")
 
-    parser.add_argument('-o', '--outfile', dest="outfile", default=None,
-                        help="")
+    required.add_argument('-fc', '--fasta-crap-db', dest="fasta_crap_db",
+                          required=True, help="")
 
-    parser.add_argument('-l', '--logfile', dest="logfile", default=os.devnull,
-                        help="")
+    optional.add_argument('-o', '--outfile', dest="outfile", default=None,
+                          help="")
+
+    optional.add_argument('-l', '--logfile', dest="logfile", default=os.devnull,
+                          help="")
 
     args = vars(parser.parse_args())
 
     if args['outfile'] is None:
         args['outfile'] = args['infile'].replace(".xlsx", "_annotated.tsv")
 
-        
     logfile = open(args['logfile'], 'w')
     logfile.write("Logfile for annotate_rnp.py\n\n")
     section_blocker = writeSectionHeader(logfile, "Script arguments:")
@@ -297,11 +298,11 @@ def main(argv=sys.argv):
     logfile.write("%s\n\n" % section_blocker)
 
     # read the data into a dataframe
-    df = pd.read_excel(args['infile'])
+    rnp_df = pd.read_excel(args['infile'])
 
     # add some basic annotations
-    df['tr_only'] = [x.count("sp|") == 0 for x in df['Proteins']]
-    df['matches'] = [len(x.split(",")) for x in df['Proteins']]
+    rnp_df['tr_only'] = [x.count("sp|") == 0 for x in rnp_df['Proteins']]
+    rnp_df['matches'] = [len(x.split(",")) for x in rnp_df['Proteins']]
 
     #(1) Get the mappings between peptide and proteins
     pep2pro = collections.defaultdict(lambda: collections.defaultdict(set))
@@ -311,7 +312,7 @@ def main(argv=sys.argv):
     initial_proteins = set()
 
     # (1.1) extract the initial mappings between proteins and peptides
-    for row_ix, row_values in df[['Proteins', 'Peptide']].iterrows():
+    for row_ix, row_values in rnp_df[['Proteins', 'Peptide']].iterrows():
 
         proteins = row_values['Proteins'].split(",")
         peptide = row_values['Peptide']
@@ -434,7 +435,6 @@ def main(argv=sys.argv):
 
     section_blocker = writeSectionHeader(logfile, "proteins per peptide:")
     counts = collections.Counter([len(x) for x in new_pep2pro.values()])
-    print(counts.most_common())
     sum_counts = sum(counts.values())
     for k, v in counts.items():
         logfile.write("%i peptide(s) (%.2f %%) have %i master protein(s)\n" % (
@@ -446,9 +446,9 @@ def main(argv=sys.argv):
 
 
     # add the top protein and uniprot id annotations
-    df['master_protein(s)'] = [";".join(new_pep2pro[protein]) for protein in df['Peptide']]
-    df['master_uniprot_id(s)'] = [";".join([protein_id.split("|")[1] for protein_id in new_pep2pro[protein]])
-                               for protein in df['Peptide']]
+    rnp_df['master_protein(s)'] = [";".join(new_pep2pro[protein]) for protein in rnp_df['Peptide']]
+    rnp_df['master_uniprot_id(s)'] = [";".join([protein_id.split("|")[1] for protein_id in new_pep2pro[protein]])
+                               for protein in rnp_df['Peptide']]
 
     # (1.4) Build dictionaries to map from protein id to protein
     # sequence and description using the fasta database
@@ -476,7 +476,7 @@ def main(argv=sys.argv):
     motif_15 = []
     motif_17 = []
 
-    for ix, row in df.iterrows():
+    for ix, row in rnp_df.iterrows():
         peptide = row['Best localization(s)']
         proteins = row['master_protein(s)'].split(";")
         protein_lengths.append(";".join(map(str, [len(protein2seq[x]) for x in proteins])))
@@ -524,16 +524,16 @@ def main(argv=sys.argv):
             motif_17.append("no_crosslink")
 
 
-    df['protein_length(s)'] = protein_lengths
-    df['protein_description(s)'] = protein_descriptions
-    df['crap_protein'] = crap_protein
+    rnp_df['protein_length(s)'] = protein_lengths
+    rnp_df['protein_description(s)'] = protein_descriptions
+    rnp_df['crap_protein'] = crap_protein
 
-    df['position_in_peptide'] = position_in_peptide
-    df['position_in_protein(s)'] = position_in_protein
+    rnp_df['position_in_peptide'] = position_in_peptide
+    rnp_df['position_in_protein(s)'] = position_in_protein
 
-    df['window_13'] = motif_13
-    df['window_15'] = motif_15
-    df['window_17'] = motif_17
+    rnp_df['window_13'] = motif_13
+    rnp_df['window_15'] = motif_15
+    rnp_df['window_17'] = motif_17
 
     new_column_order = [
         "Best localization(s)",
@@ -549,10 +549,10 @@ def main(argv=sys.argv):
         "Peptide",
         "Proteins"]
 
-    new_column_order.extend([x for x in df.columns if x not in new_column_order])
-    final_df = df[new_column_order]
+    new_column_order.extend([x for x in rnp_df.columns if x not in new_column_order])
+    final_rnp_df = rnp_df[new_column_order]
 
-    final_df.to_csv(args['outfile'], index=False, sep="\t")
+    final_rnp_df.to_csv(args['outfile'], index=False, sep="\t")
     os.chmod(args['outfile'], 0o666)
 
 if __name__ == "__main__":
