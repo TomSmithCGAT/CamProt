@@ -12,7 +12,7 @@ from setuptools import setup, Extension
 ########################################################################
 # collect camprot version
 def getVersion():
-    return "0.0.9"
+    return "0.0.11"
 
 version = getVersion()
 
