@@ -6,13 +6,13 @@ from ez_setup import use_setuptools
 use_setuptools("10.0")
 import setuptools
 
-from setuptools import setup, Extension
+from setuptools import setup, Extension, find_packages
 
 ########################################################################
 ########################################################################
 # collect camprot version
 def getVersion():
-    return "0.0.12"
+    return "0.0.13"
 
 version = getVersion()
 
@@ -26,7 +26,7 @@ major, minor1, minor2, s, tmp = sys.version_info
 if (major == 2 and minor1 < 7) or major < 2:
     raise SystemExit("""camprot requires Python 2.7 or later.""")
 
-camprot_packages = ["camprot"]
+camprot_packages = find_packages()
 camprot_package_dirs = {'camprot': 'camprot'}
 
 install_requires = [
