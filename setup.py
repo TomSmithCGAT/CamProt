@@ -53,8 +53,8 @@ Topic :: Software Development
 Topic :: Scientific/Engineering
 Operating System :: POSIX
 Operating System :: Unix
-Operating System :: MacOS :: MacOS X',
-Operating System :: Microsoft :: Windows',
+Operating System :: MacOS
+Operating System :: Microsoft
 """
 
 setup(
