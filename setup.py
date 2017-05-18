@@ -62,7 +62,7 @@ setup(
     platforms=["any"],
     keywords="computational proteomics",
     long_description='camprot: Scripts and modules for computational proteomics',
-    classifiers=list(filter(None, classifiers.split("\n"))),
+    classifiers=list([_f for _f in classifiers.split("\n") if _f]),
     url="https://github.com/TomSmithCGAT/CamProt",
     download_url="https://github.com/TomSmithCGAT/CamProt/tarball/%s" % version,
     # package contents
