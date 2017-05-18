@@ -174,7 +174,7 @@ class FastaIterator:
     def __next__(self):
         return next(self.iterator)
 
-    def __next__(self):
+    def next(self):
         return next(self.iterator)
 
 
@@ -293,7 +293,7 @@ def main(argv=sys.argv):
     logfile = open(args['logfile'], 'w')
     logfile.write("Logfile for annotate_rnp.py\n\n")
     section_blocker = writeSectionHeader(logfile, "Script arguments:")
-    for key, value in list(args.items()):
+    for key, value in args.items():
         logfile.write("%s: %s\n" % (key, value))
     logfile.write("%s\n\n" % section_blocker)
 
@@ -346,7 +346,7 @@ def main(argv=sys.argv):
             
     # (1.2) find the peptides with only TrEMBL protein matches and
     # 'upgrade' these TrEMBL proteins to being equivalent to SwissProt
-    tr_only_peptides = set([x for x in list(pep2pro.keys()) if len(pep2pro[x][1])==0])
+    tr_only_peptides = set([x for x in pep2pro.keys() if len(pep2pro[x][1])==0])
 
     set_upgraded = set()
     for peptide in tr_only_peptides:
@@ -377,7 +377,7 @@ def main(argv=sys.argv):
     new_top_level_proteins = copy.deepcopy(top_level_proteins)
     new_pep2pro = collections.defaultdict(set)
 
-    peptide_count = max(list(map(len, list(tmppro2pep.values()))))
+    peptide_count = max(map(len, tmppro2pep.values()))
 
     section_blocker = writeSectionHeader(
         logfile, ("Parsimonious method to identify minimal set of proteins"
@@ -434,9 +434,9 @@ def main(argv=sys.argv):
     logfile.write("%s\n\n" % section_blocker)
 
     section_blocker = writeSectionHeader(logfile, "proteins per peptide:")
-    counts = collections.Counter([len(x) for x in list(new_pep2pro.values())])
+    counts = collections.Counter([len(x) for x in new_pep2pro.values()])
     sum_counts = sum(counts.values())
-    for k, v in list(counts.items()):
+    for k, v in counts.items():
         logfile.write("%i peptide(s) (%.2f %%) have %i master protein(s)\n" % (
             v, (100 * v)/sum_counts, k))
     logfile.write("%s\n\n" % section_blocker)

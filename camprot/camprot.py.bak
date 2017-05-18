@@ -29,7 +29,7 @@ def main(argv=None):
                         "scripts")
 
     if len(argv) == 1 or argv[1] == "--help" or argv[1] == "-h":
-        print((globals()["__doc__"]))
+        print(globals()["__doc__"])
 
         return
 
