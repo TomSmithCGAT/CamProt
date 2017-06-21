@@ -331,7 +331,7 @@ def main(argv=sys.argv):
 			l_sp = [ p for p in l if "sp|" in p]
 			
 			# Extract just the protein ids from the header line
-			sp_id = [i.split("|")[1] for i in l_sp]
+			sp_id = [i.split("|")[1] for i in l_sp] 
 			
 			# Join the protein ids into a string a print
 			join_sp_id = ";".join(sp_id)
@@ -341,7 +341,7 @@ def main(argv=sys.argv):
 			l_tr = [ p for p in l if "tr|" in p]
 			tr_id = [i.split("|")[1] for i in l_tr]
 			join_tr_id = ";".join(tr_id)
-			print("Trembl : ",join_tr_id)	
+			#print("Trembl : ",join_tr_id)	
 	
 	
 			# We dont have anything other than SwissProt or trEMBL ids so no need to look for anything else
@@ -362,12 +362,14 @@ def main(argv=sys.argv):
 		rnp_df['new_protein_tr_ids'] = new_protein_tr_ids
 		rnp_df['crap_protein'] = crap_protein
 		
-		print(rnp_df)
+		print(rnp_df.ix[1:5,:])
 		
 	# Now that we have matched each peptide to a protein using the FASTA and cRAP fasta files
 	# We want to use the maximum parsimony approach so that a set of peptides arising from the same protein
 	# map back uniquely to that protein. We have found that some lower quality peptides map to 
 	# isoforms of lower quality stored in trEMBL so we only choose those that are in SwissProt database
+	# We need to go through the parsimonious approach with Swissprot entries as top priorities. 
+	# If this does not return a protein, then we go to trEMBL and repeat the exercise
 	
 	#(1) Get the mappings between peptide and proteins
 	pep2pro = collections.defaultdict(lambda: collections.defaultdict(set))
@@ -391,9 +393,9 @@ def main(argv=sys.argv):
 			pro2pep[protein].add(peptide)
 			pep2pro[peptide][1].add(protein)
 	
-	print(pep2pro.keys())
-	print(pro2pep)
-	print(initial_proteins)
+	#print(pep2pro.keys())
+	#print(pro2pep)
+	#print(initial_proteins)
 
 	section_blocker = writeSectionHeader(logfile, "Initial file stats")
 	logfile.write("# initial peptides: %i\n" % len(pep2pro))
@@ -415,6 +417,11 @@ def main(argv=sys.argv):
 	new_pep2pro = collections.defaultdict(set)
 
 	peptide_count = max(map(len, tmppro2pep.values()))
+	
+	#print(tmppro2pep)
+	#print(new_top_level_proteins)
+	#print(new_pep2pro)
+	print("max peptide count is ", peptide_count)
 
 	section_blocker = writeSectionHeader(
 		logfile, ("Parsimonious method to identify minimal set of proteins"
@@ -431,7 +438,10 @@ def main(argv=sys.argv):
 
 		top_proteins = set()
 		top_score = 0
+		
 		#(1.3.2) Find the proteins with the highest number of peptide matches
+		# Iterate through to find the protein with most number of matches. 
+		# top_starts off at 0. Then add a protein, then go to the next one and see if it is higher. If yes, make this the new value. If no, continue.
 		for protein in new_top_level_proteins:
 			if len(tmppro2pep[protein]) == top_score:
 				top_proteins.add(protein)
@@ -441,7 +451,7 @@ def main(argv=sys.argv):
 
 		logfile.write("%i remaining protein(s) with %i peptides\n" % (
 			len(top_proteins), top_score))
-		
+'''		
 		# (1.3.3) Remove the top proteins and the associated peptides
 		for top_protein in top_proteins:
 			new_top_level_proteins.remove(top_protein)
@@ -478,13 +488,11 @@ def main(argv=sys.argv):
 	# Check all the peptides are covered
 	assert set(pep2pro.keys()).difference(set(new_pep2pro.keys())) == set()
 
-'''
 	# add the top protein and uniprot id annotations
-	rnp_df['master_protein(s)'] = [";".join(new_pep2pro[protein]) for protein in rnp_df['Peptide']]
-	rnp_df['master_uniprot_id(s)'] = [";".join([protein_id.split("|")[1] for protein_id in new_pep2pro[protein]])
-							   for protein in rnp_df['Peptide']]
+	rnp_df['master_protein(s)'] = [";".join(new_pep2pro[protein]) for protein in rnp_df['new_protein_sp_ids']]
 
-	
+	rnp_df.to_tsv(args['outfile'], index=False, sep="\t")
+	os.chmod(args['outfile'], 0o666)
 
 '''
 
