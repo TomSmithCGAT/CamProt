@@ -59,8 +59,10 @@ def getSequence(uniprot_id, api_first=True, return_taxid=False):
 
             if u_line[0] == '//':
                 output = False
+
             if output:
                 sequence += "".join(u_line)
+
             if u_line[0] == 'SQ' and u_line[3] == 'SEQUENCE':
                 output = True
 
@@ -181,3 +183,71 @@ def iteratePeptides(sequence="",
                 peptides.append(["", position+1, position+1, 0, missed_cleavage])
 
             peptide_id += (missed_cleavages + 1)
+
+
+def getFreeEnergy(seq):
+    ''' calculate the free energy for a linear polypeptide sequence
+    going from aqeuous to organic. Uses data from White, Stephen
+    (2006-06-29). "Experimentally Determined Hydrophobicity Scales" to
+    determine the free energy as a protein goes from water to an
+    organic compound (n-octanol)
+
+    http://blanco.biomol.uci.edu/hydrophobicity_scales.html'''
+
+    
+    aa2freeEnergy = {"I": -1.12,
+                     "L": -1.25,
+                     "F": -1.71,
+                     "V": -0.46,
+                     "M": -0.67,
+                     "P": 0.14,
+                     "W": -2.09,
+                     "T": 0.25,
+                     "Q": 0.77,
+                     "C": -0.02,
+                     "Y": -0.71,
+                     "A": 0.5,
+                     "S": 0.46,
+                     "N": 0.85,
+                     "R": 1.81,
+                     "G": 1.15,
+                     "H": 2.33,
+                     "E": 3.63,
+                     "K": 2.8,
+                     "D": 3.64,
+                     "U": 0, # Seloncysteine was not considered in linked table
+                     "X": 0}  # X = missing protein
+
+    free_energy = 0
+
+    for amino_acid in seq:
+        free_energy += aa2freeEnergy[amino_acid]
+
+    return free_energy
+
+
+def getFractionHydrophobic(seq):
+    ''' calculate the fraction of amino acids which are hydrophobic'''
+
+    hydrophobicAA = set(("A", "V", "I", "L", "M", "F", "Y", "W"))
+
+    count_hydrophobic = 0
+
+    for amino_acid in seq:
+        if amino_acid in hydrophobicAA:
+            count_hydrophobic += 1
+
+    return float(count_hydrophobic)/len([aa for aa in seq if aa!= "X"])
+
+def getFractionHydrophillic(seq):
+    ''' calculate the fraction of amino acids which are hydrophillic'''
+
+    hydrophillicAA = set(("R", "N", "D", "Q", "E", "H", "K", "S", "T"))
+
+    count_hydrophillic = 0
+
+    for amino_acid in seq:
+        if amino_acid in hydrophillicAA:
+            count_hydrophillic += 1
+
+    return float(count_hydrophillic)/len([aa for aa in seq if aa!= "X"])

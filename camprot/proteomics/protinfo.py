@@ -37,21 +37,19 @@ def getNames(reviewed=True, taxid=10090, size=-1):
     if taxid:
         ebi_api_url += '&taxid=%i' % taxid
 
-    ebi_api_url = 'http://www.ebi.ac.uk/proteins/api/features?offset=0&size=-1&reviewed=true&taxid=10090&types=MOD_RES'
+    #ebi_api_url = 'http://www.ebi.ac.uk/proteins/api/features?offset=0&size=-1&reviewed=true&types=MOD_RES'
 
-    print(ebi_api_url)
+    #r = requests.get(ebi_api_url, headers={ "Accept" : "application/json"})
 
-    r = requests.get(ebi_api_url, headers={ "Accept" : "application/json"})
+    #if not r.ok:
+    #    r.raise_for_status()
+    #    sys.exit()
 
-    if not r.ok:
-        r.raise_for_status()
-        sys.exit()
-
-    text = json.loads(r.text)
+    #text = json.loads(r.text)
 
     #return text
 
-    requestURL = "https://www.ebi.ac.uk/proteins/api/proteins?&size=-1&taxid=10090"
+    requestURL = "https://www.ebi.ac.uk/proteins/api/proteins?&size=%i&taxid=%i" % (size, taxid)
 
     r = requests.get(requestURL, headers={ "Accept" : "application/json"})
 
@@ -63,3 +61,17 @@ def getNames(reviewed=True, taxid=10090, size=-1):
 
     return responseBody
 
+
+def getProtName(uniprot_id):
+    '''
+    return the name for a uniprot_id
+    '''
+    ebi_api_url = 'https://www.ebi.ac.uk/proteins/api/proteins/'
+    http = urllib3.PoolManager()
+    r = requests.get(ebi_api_url + uniprot_id, headers={ "Accept" : "application/json"})
+    if not r.ok:
+        r.raise_for_status()
+        sys.exit()
+
+    text = json.loads(r.text)
+    return text['protein']['recommendedName']['fullName']['value']
