@@ -426,8 +426,8 @@ plotCoverage = R('''
     scale_y_continuous(limits=c(-(max_abs_coverage/10),max_abs_coverage)) +
     geom_line()
 
-    ggsave(p1, file=fraction_plotname)
-    ggsave(p2, file=norm_plotname)
+    ggsave(p2, file=fraction_plotname)
+    ggsave(p1, file=norm_plotname)
 
     }
     ''')
@@ -462,7 +462,7 @@ plotCoveredTM = R('''
 
     my_theme <- theme(
     text=element_text(size=20),
-    legend.text=element_text(size=12),
+    legend.text=element_text(size=8),
     axis.title=element_blank(),
     panel.background=element_blank(),
     panel.border=element_blank(),
@@ -748,6 +748,32 @@ def main(argv=sys.argv):
 
     final_tm_coverage_df = finaliseDataFrame(
         tm_coverage_df, coverage_threshold=args['coverage_thresh'])
+    
+    covered_proteins = final_tm_coverage_df[final_tm_coverage_df['coverage']==True]
+
+    unique_proteins = pd.DataFrame(covered_proteins.groupby("uniprot_id").aggregate(
+        {"desc" : len}))
+
+    # 2 because the dataframe inc. "combined" sample
+    unique_proteins = set(unique_proteins[unique_proteins['desc']==2].index.tolist())
+
+    covered_proteins_tally = pd.DataFrame(covered_proteins.groupby("desc").aggregate(
+        {"uniprot_id" : len}))
+
+    unique_proteins_df = covered_proteins[
+        covered_proteins['uniprot_id'].isin(unique_proteins)]
+
+    unique_proteins_tally = pd.DataFrame(unique_proteins_df.groupby("desc").aggregate(
+        {"uniprot_id" : len}))
+
+    covered_proteins_tally.to_csv(
+        os.path.join(args['outdir'], "covered_proteins_count.tsv"), sep="\t")
+    unique_proteins_tally.to_csv(
+        os.path.join(args['outdir'], "unique_proteins_count.tsv"), sep="\t")
+    covered_proteins.to_csv(
+        os.path.join(args['outdir'], "covered_proteins.tsv"), sep="\t")
+    unique_proteins_df.to_csv(
+        os.path.join(args['outdir'], "unique_proteins.tsv"), sep="\t")
 
     plotCoveredTM(final_tm_coverage_df,
                   os.path.join(args['outdir'], "circ_covered.png"),
@@ -758,6 +784,8 @@ def main(argv=sys.argv):
                   os.path.join(args['outdir'], "circ_all.png"),
                   circular=1, plot_only_covered=0,
                   colour_by_group=1, group="desc")
+
+    
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
