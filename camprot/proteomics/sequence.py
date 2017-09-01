@@ -194,7 +194,6 @@ def getFreeEnergy(seq):
 
     http://blanco.biomol.uci.edu/hydrophobicity_scales.html'''
 
-    
     aa2freeEnergy = {"I": -1.12,
                      "L": -1.25,
                      "F": -1.71,
@@ -219,7 +218,6 @@ def getFreeEnergy(seq):
                      "X": 0}  # X = missing protein
 
     free_energy = 0
-
     for amino_acid in seq:
         free_energy += aa2freeEnergy[amino_acid]
 

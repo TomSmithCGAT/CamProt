@@ -157,9 +157,15 @@ def main(argv=sys.argv):
                           default=None,
                           help=("Column with the matches already identified "
                                 "for the peptide"))
+
+    optional.add_argument('--only-swissprot', dest="strict_sw",
+                          default=False, action='store_true',
+                          help=("Ignore matches to non-swissprot proteins"))
+
     optional.add_argument('--matches-separator', dest="matches_sep",
                           default=",",
                           help=("Separator for the matches column"))
+
     optional.add_argument('-o', '--outfile', dest="outfile",
                           default=None,
                           help=("Enter a file name for your output"))
@@ -229,6 +235,7 @@ def main(argv=sys.argv):
     else:
         fa_iterator = fasta.FastaIterator(open(args['fasta_crap_db']))
     for entry in fa_iterator:
+        accession = entry.title.split(" ")[0].split("|")[1]
         crap_proteins.add(accession)
 
     # (1.2) Parse the infiles to obtain maps of peptides to proteins and vis versa
@@ -357,32 +364,33 @@ def main(argv=sys.argv):
         len(pro2pep)-len(top_level_proteins)))
     logfile.write("%s\n\n" % section_blocker)
 
-    section_blocker = writeSectionHeader(
-        logfile, "Deciding which TrEMBL proteins to retain:")
+    if not args['strict_sw']:
+        section_blocker = writeSectionHeader(
+            logfile, "Deciding which TrEMBL proteins to retain:")
 
-    # (1.2) find the peptides with only TrEMBL protein matches and
-    # 'upgrade' these TrEMBL proteins to being equivalent to SwissProt
-    # across all peptides where these TrEMBL proteins match
-    tr_only_peptides = set([x for x in pep2pro.keys() if len(pep2pro[x][1]) == 0])
+        # (1.2) find the peptides with only TrEMBL protein matches and
+        # 'upgrade' these TrEMBL proteins to being equivalent to SwissProt
+        # across all peptides where these TrEMBL proteins match
+        tr_only_peptides = set([x for x in pep2pro.keys() if len(pep2pro[x][1]) == 0])
 
-    logfile.write("# peptides with only TrEMBL matches: %i\n" % (
-        len(tr_only_peptides)))
+        logfile.write("# peptides with only TrEMBL matches: %i\n" % (
+            len(tr_only_peptides)))
 
-    set_upgraded = set()
-    for peptide in tr_only_peptides:
-        upgraded = pep2pro[peptide][2]
-        set_upgraded.update(upgraded)
-        top_level_proteins.update(upgraded)
+        set_upgraded = set()
+        for peptide in tr_only_peptides:
+            upgraded = pep2pro[peptide][2]
+            set_upgraded.update(upgraded)
+            top_level_proteins.update(upgraded)
 
-    logfile.write("# TrEMBL proteins retained as no SwissProt matches for "
-                  "peptide: %i\n" % (len(set_upgraded)))
+        logfile.write("# TrEMBL proteins retained as no SwissProt matches for "
+                      "peptide: %i\n" % (len(set_upgraded)))
 
-    # 'upgrade' the selected TrEMBL proteins
-    for peptide in pep2pro:
-        pep2pro[peptide][2] = pep2pro[peptide][2].difference(set_upgraded)
-        pep2pro[peptide][1] = pep2pro[peptide][1].union(set_upgraded)
+        # 'upgrade' the selected TrEMBL proteins
+        for peptide in pep2pro:
+            pep2pro[peptide][2] = pep2pro[peptide][2].difference(set_upgraded)
+            pep2pro[peptide][1] = pep2pro[peptide][1].union(set_upgraded)
 
-    logfile.write("%s\n\n" % section_blocker)
+        logfile.write("%s\n\n" % section_blocker)
 
     # (1.3) Use a parsimonious approach to identifty the minimum number
     # of proteins required to cover all the peptides:
@@ -467,7 +475,12 @@ def main(argv=sys.argv):
     logfile.write("%s\n\n" % section_blocker)
 
     # Check all the peptides are covered
-    assert set(pep2pro.keys()).difference(set(new_pep2pro.keys())) == set()
+    if not args['strict_sw']:
+        assert set(pep2pro.keys()).difference(set(new_pep2pro.keys())) == set()
+    else:
+        missing_peptides = set(pep2pro.keys()).difference(set(new_pep2pro.keys()))
+        logfile.write("%i peptide(s) (%.2f %%) have no master protein(s)\n" % (
+            len(missing_peptides), (100 * len(missing_peptides))/sum_counts))
 
 
     if args['outfile']:
