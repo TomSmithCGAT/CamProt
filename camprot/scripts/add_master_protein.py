@@ -23,6 +23,8 @@ The following columns are added:
  - protein_length: The length(s) of the master protein(s)
  - crap_protein: Is the protein in the cRAP database of common
    proteomics proteins, e.g keratin
+ - crap_associated_protein: does the protein share peptides with a
+   protein in the cRAP database of common proteomics proteins
 
 If a log file is requested (--log), basic statistics are collected and
 written to the log file
@@ -158,6 +160,10 @@ def main(argv=sys.argv):
                           help=("Column with the matches already identified "
                                 "for the peptide"))
 
+    optional.add_argument('--check-crap', dest="check_crap",
+                          default=False, action='store_true',
+                          help=("Check each peptide against the cRAP fasta"))
+
     optional.add_argument('--only-swissprot', dest="strict_sw",
                           default=False, action='store_true',
                           help=("Ignore matches to non-swissprot proteins"))
@@ -217,7 +223,7 @@ def main(argv=sys.argv):
 
         for entry in fa_iterator:
             accession = entry.title.split(" ")[0].split("|")[1]
-            protein2seq[accession] = entry.sequence
+            protein2seq[accession] = entry.sequence.upper().replace("I", "L")
             protein2description[accession] = entry.title.split(" ")[0]
             protein2longdescription[accession] = "|".join(entry.title.split(" ")[0:2])
             if entry.title.split(" ")[0].split("|")[0] == "sp":
@@ -229,6 +235,7 @@ def main(argv=sys.argv):
                                  "SwissProt(sp) or TrEMBL(tr)")
 
     crap_proteins = set()
+    associated_crap_proteins = set()
     if args['fasta_crap_db'].endswith(".gz"):
         fa_iterator = fasta.FastaIterator(
             io.TextIOWrapper(gzip.open(args['fasta_crap_db'])))
@@ -282,7 +289,15 @@ def main(argv=sys.argv):
 
                 peptide = row_values[args['pep_column']]
 
+                if args['check_crap']:
+                    add_crap_proteins = [prot for prot in protein2seq if
+                                         (prot in crap_proteins and
+                                          peptide in protein2seq[prot])]
+                    proteins.extend(add_crap_proteins)
+
                 for protein in proteins:
+                    if protein in crap_proteins:
+                        associated_crap_proteins.update(proteins)
                     if protein not in protein2seq:
                         logfile.write(
                             "protein %s matches peptide %s but is not found "
@@ -508,14 +523,21 @@ def main(argv=sys.argv):
         protein_lengths = []
         protein_descriptions = []
         crap_protein = []
+        associated_crap_protein = []
+        peptide_start = []
+        peptide_end = []
 
         for ix, row in peptide_df.iterrows():
             proteins = row['master_protein'].split(";")
+            pep_sequence = row['Sequence'].upper().replace("I", "L").replace("X", "L")
 
             if proteins == [""]:
                 protein_lengths.append("")
                 protein_descriptions.append("")
                 crap_protein.append("")
+                associated_crap_protein.append("")
+                peptide_start.append("")
+                peptide_end.append("")
             else:
                 protein_lengths.append(
                     ";".join(map(str, [len(protein2seq[x]) for x in proteins])))
@@ -530,9 +552,51 @@ def main(argv=sys.argv):
                         break
                 crap_protein.append(crap)
 
+                # (1.5.2) does peptide match a protein associated with a cRAP protein?
+                associated_crap = 0
+                for protein in proteins:
+                    if protein in associated_crap_proteins:
+                        associated_crap = 1
+                        break
+                associated_crap_protein.append(associated_crap)
+
+                starts = []
+                ends = []
+                for protein in proteins:
+                    protein_sequence = protein2seq[protein]
+                    all_matches = re.findall(pep_sequence, protein_sequence)
+                    if len(all_matches) > 1:
+                        logfile.write(
+                            "peptide: %s is observed more than once in protein: %s\n" % (
+                                pep_sequence, protein))
+                        starts.append("NA")
+                        ends.append("NA")
+                    elif len(all_matches) == 0:
+                        logfile.write(
+                            "peptide: %s is not observed in protein: %s\n" % (
+                                pep_sequence, protein))
+                        starts.append("NA")
+                        ends.append("NA")
+                    else:
+                        peptide_match = re.search(pep_sequence, protein_sequence)
+                        starts.append(peptide_match.start())
+                        ends.append(peptide_match.end())
+
+                try:
+                    peptide_start.append(";".join(map(str, starts)))
+                    peptide_end.append(";".join(map(str, ends)))
+                except:
+                    print(starts)
+                    print(ends)
+                    raise ValueError()
+
+
         peptide_df['protein_length'] = protein_lengths
         peptide_df['protein_description'] = protein_descriptions
+        peptide_df['peptide_start'] = peptide_start
+        peptide_df['peptide_end'] = peptide_end
         peptide_df['crap_protein'] = crap_protein
+        peptide_df['associated_crap_protein'] = associated_crap_protein
         peptide_df['unique'] = [1 if len(x.split(";"))==1 else 0
                                 for x in peptide_df['master_protein']]
 
