@@ -77,49 +77,6 @@ def getPeptidePosition(peptide_seq, protein_seq):
         # no matches
         return None
     
-
-def normaliseArraySize(input_array, size=10):
-    ''' normalise an array to a set size, e.g [0,0,1,1] -> [0,0,0,1,1,1] or [0,1]
-    Can expand or contract to an array of any length'''
-    new_array = np.zeros(size)
-    
-    if len(input_array) == size:
-        return input_array
-    
-    bin_size = len(input_array)/float(size)
-    #print(bin_size)
-    lower_edge = 0
-    upper_edge = 0
-    for array_ix in range(0, size):
-        total_aas = (array_ix + 1) * bin_size
-        upper_edge = total_aas
-        
-        combined_coverage = 0
-        if bin_size < 1:
-            if math.floor(lower_edge) == math.floor(upper_edge) or math.floor(upper_edge) == len(input_array):
-                combined_coverage += (upper_edge - lower_edge) * input_array[math.floor(lower_edge)]    
-            else:
-                combined_coverage += (math.ceil(lower_edge) - lower_edge) * input_array[math.floor(lower_edge)]
-                combined_coverage += (upper_edge - math.floor(upper_edge)) * input_array[math.floor(upper_edge)]
-        else:
-            combined_coverage += ((math.ceil(lower_edge) - lower_edge) *
-                                  input_array[math.floor(lower_edge)])
-            combined_coverage += input_array[math.ceil(lower_edge):math.floor(upper_edge)].sum()
-            combined_coverage += ((upper_edge - math.floor(upper_edge)) *
-                                  input_array[min(math.floor(upper_edge), len(input_array)-1)])
-
-        new_array[array_ix] = combined_coverage / (upper_edge - lower_edge)
-        lower_edge = upper_edge
-        
-    # the average coverage shouldn't have changed. Due to floating point arithemetic, 
-    # possible there is a slight change
-    if abs(new_array.mean() - input_array.mean()) > 0.001:
-        print(input_array, input_array.mean())
-        print(new_array, new_array.mean())
-        raise ValueError()
-    
-    return new_array
-
 def normalisePaddedArray(input_array, upstream_pad, downstream_pad, tm_length, size):
     ''' Normalise an array composed of three regions (upstream, middle and end), where middle = TM'''
     assert len(input_array) == sum((upstream_pad, downstream_pad, tm_length))
@@ -129,9 +86,9 @@ def normalisePaddedArray(input_array, upstream_pad, downstream_pad, tm_length, s
     down_array = input_array[upstream_pad+tm_length:]
     new_array = np.zeros(3 * size)
     
-    new_array[0:size] = normaliseArraySize(up_array, size=size)
-    new_array[size:2*size] = normaliseArraySize(tm_array, size=size)
-    new_array[2*size: 3*size] = normaliseArraySize(down_array, size=size)
+    new_array[0:size] = sequence.sequence.normaliseArraySize(up_array, size=size)
+    new_array[size:2*size] = sequence.normaliseArraySize(tm_array, size=size)
+    new_array[2*size: 3*size] = sequence.normaliseArraySize(down_array, size=size)
     
     return(new_array)
 

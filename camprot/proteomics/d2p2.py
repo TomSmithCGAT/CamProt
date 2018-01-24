@@ -95,6 +95,7 @@ def getChunks(uniprot_ids, chunk_size=250):
     return chunks of D2P2 data
     This avoids excessive 'get' requests
     Note the chunk size is limited to 250 by default to prevent excessively long urls
+    which would throw an error
     '''
     http = urllib3.PoolManager()
 
@@ -104,7 +105,6 @@ def getChunks(uniprot_ids, chunk_size=250):
         chunk_ids = list(uniprot_ids)[chunk_start: (chunk_start + chunk_size)]
 
         url = '%s/["%s"]' % (d2p2_url, '","'.join(chunk_ids))
-
         request = http.request('GET', url=url)
         response = json.loads(request.data.decode('utf8'))
 
@@ -114,7 +114,7 @@ def getChunks(uniprot_ids, chunk_size=250):
 def iterator(uniprot_ids):
 
     for chunk in getChunks(uniprot_ids):
-
+        
         for key in chunk:
 
             d2p2_text = chunk[key]

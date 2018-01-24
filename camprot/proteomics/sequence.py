@@ -17,6 +17,8 @@ Code
 
 import urllib3
 import json
+import numpy as np
+import math
 
 
 def getSequence(uniprot_id, api_first=True, return_taxid=False):
@@ -249,3 +251,45 @@ def getFractionHydrophillic(seq):
             count_hydrophillic += 1
 
     return float(count_hydrophillic)/len([aa for aa in seq if aa!= "X"])
+
+
+def normaliseArraySize(input_array, size=10):
+    ''' normalise an array to a set size, e.g [0,0,1,1] -> [0,0,0,1,1,1] or [0,1]
+    Can expand or contract to an array of any length'''
+    new_array = np.zeros(size)
+    
+    if len(input_array) == size:
+        return input_array
+    
+    bin_size = len(input_array)/float(size)
+    lower_edge = 0
+    upper_edge = 0
+    for array_ix in range(0, size):
+        total_aas = (array_ix + 1) * bin_size
+        upper_edge = total_aas
+        
+        combined_coverage = 0
+        if bin_size < 1:
+            if math.floor(lower_edge) == math.floor(upper_edge) or math.floor(upper_edge) == len(input_array):
+                combined_coverage += (upper_edge - lower_edge) * input_array[math.floor(lower_edge)]    
+            else:
+                combined_coverage += (math.ceil(lower_edge) - lower_edge) * input_array[math.floor(lower_edge)]
+                combined_coverage += (upper_edge - math.floor(upper_edge)) * input_array[math.floor(upper_edge)]
+        else:
+            combined_coverage += ((math.ceil(lower_edge) - lower_edge) *
+                                  input_array[math.floor(lower_edge)])
+            combined_coverage += input_array[math.ceil(lower_edge):math.floor(upper_edge)].sum()
+            combined_coverage += ((upper_edge - math.floor(upper_edge)) *
+                                  input_array[min(math.floor(upper_edge), len(input_array)-1)])
+
+        new_array[array_ix] = combined_coverage / (upper_edge - lower_edge)
+        lower_edge = upper_edge
+        
+    # the average coverage shouldn't have changed. Due to floating point arithemetic, 
+    # possible there is a slight change
+    if abs(new_array.mean() - input_array.mean()) > 0.001:
+        print(input_array, input_array.mean())
+        print(new_array, new_array.mean())
+        raise ValueError()
+    
+    return new_array
