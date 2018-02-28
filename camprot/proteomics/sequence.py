@@ -132,22 +132,29 @@ def iteratePeptides(sequence="",
                     method='trypsin',
                     missed_cleavages=2,
                     min_length=4,
-                    max_length=40):
+                    max_length=40,
+                    output_last=False,
+                    set_iso_to_leucine=False):
     '''
     Naive in silico digestion
 
-    Need to add other methods
+    output_last = should the final peptide be yielded? Note, this
+    peptide will not have a terminal cleaved peptide
+
+    Currently, all methods cleave at 3' end
     '''
 
-    if method=='trypsin':
-        cleave_bases = ["K", "R"]
+    getCleaveBases = {'trypsin': ["K", "R"],
+                      'lysC': ["K"],
+                      'gluc': ["E", "D"],
+                      'chromotrypsin': ["R", "Y", "W"]}
 
-    if method=='gluc':
-        cleave_bases = ["E", "D"]
+    try:
+        cleave_bases = getCleaveBases[method]
+    except KeyError:
+        raise KeyError("unsupported method argument, choose from: %s" % (
+            ", ".join(getCleaveBases.keys())))
 
-    if method=='chromotrypsin':
-        cleave_bases = ["R", "Y", "W"]
-    
     peptide_ids = set((0,))
     # seq, start, end, missed, allowed_missed
     peptides = [["", 0, 0, 0, 0]]
@@ -176,6 +183,8 @@ def iteratePeptides(sequence="",
 
                     if len(seq) > min_length and len(seq) < max_length:
                         pep_seq, start, end, count, missed = peptides[peptide]
+                        if set_iso_to_leucine:
+                            pep_seq = pep_seq.replace("I", "L")
                         yield pep_seq, start, end, missed
 
             peptide_ids.add(peptide_id + 1)
@@ -185,6 +194,20 @@ def iteratePeptides(sequence="",
                 peptides.append(["", position+1, position+1, 0, missed_cleavage])
 
             peptide_id += (missed_cleavages + 1)
+    
+    if output_last:
+        for peptide in list(peptide_ids):
+            peptides[peptide][3] += 1
+            seq, start, end, missed, allowed_missed, = peptides[peptide]
+
+            if missed > allowed_missed:
+                # remove peptide id 
+                peptide_ids.remove(peptide)
+
+                if len(seq) > min_length and len(seq) < max_length:
+                    pep_seq, start, end, count, missed = peptides[peptide]
+                    yield pep_seq, start, end, missed
+
 
 
 def getFreeEnergy(seq):
