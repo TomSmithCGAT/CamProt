@@ -111,9 +111,9 @@ def getChunks(uniprot_ids, chunk_size=250):
         yield response
 
 
-def iterator(uniprot_ids):
+def iterator(uniprot_ids, chunk_size=250):
 
-    for chunk in getChunks(uniprot_ids):
+    for chunk in getChunks(uniprot_ids, chunk_size=chunk_size):
         
         for key in chunk:
 
