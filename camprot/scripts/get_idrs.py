@@ -109,13 +109,22 @@ def main(argv=sys.argv):
     results = u.search("organism:%s+and+reviewed:yes" % args['tax_id'], columns="id")
     uniprot_ids = [x.split()[0] for x in results.strip().split("\n")[1:]]
 
-    # 2. Get IDRs, rebuild consensus and get IDR blocks
+    # 2. Get IDRs, rebuild consensus and get IDR blocks, write out
+
+    if args['outfile']:
+        outf = open(args['outfile'], "w")
+    else:
+        outf = sys.stdout
+    
+    outf.write(
+        "\t".join(
+            ("UniprotID", "protein_length", "total_idr_length",
+             "fraction_idr", "idrs", "idr_positions")) + "\n")
+
     section_blocker = writeSectionHeader(logfile, "Getting IDR info from D2P2...")
     idr_data_available = set()
     idr_data_unavailable = set()
     sequence_length_idr = {}
-
-    blocks = collections.defaultdict(list)
 
     n = 0
 
@@ -129,10 +138,24 @@ def main(argv=sys.argv):
 
         d2p2_entry.setIDRs(args['consensus'], args['size'])
 
-        blocks[d2p2_entry.name] = d2p2_entry.idrs
-
         idr_data_available.add(d2p2_entry.name)
         sequence_length_idr[d2p2_entry.name] = d2p2_entry.length
+
+        idr_positions = []
+        total_idr = 0
+        for idr in d2p2_entry.idrs:
+            if not idr[1] - idr[0] >= args['size']:
+                raise ValueError(
+                    "This IDR is too small, how did it get here?!: %s" % idr)
+            total_idr += (idr[1] - idr[0])
+            idr_positions.append("[%s, %s]" % idr)
+        protein_length = sequence_length_idr[d2p2_entry.name]
+        fraction_idr = total_idr/protein_length
+        outf.write("\t".join(map(str, (
+            d2p2_entry.name, protein_length, total_idr,
+            fraction_idr, len(d2p2_entry.idrs),
+            ",".join(idr_positions)))) + "\n")
+        outf.flush()
 
         n += 1
         current_time = datetime.datetime.now()
@@ -144,42 +167,19 @@ def main(argv=sys.argv):
     logfile.write('\nfinished: %s\n' % current_time)
     logfile.flush()
 
+    logfile.write("%s\n\n" % section_blocker)
+
     # 3. Log proteins with no IDR data
     idr_data_unavailable = set(uniprot_ids).difference(idr_data_available)
 
+    section_blocker = writeSectionHeader(logfile, "Missing IDRs")
     logfile.write("Unable to detect IDR for %s / %s proteins\n" % (
         len(idr_data_unavailable), len(uniprot_ids)))
     logfile.write("No IDRs for:\n%s\n" %  "\n".join(idr_data_unavailable))
-
+    logfile.write("%s\n\n" % section_blocker)
     logfile.write("%s\n\n" % section_blocker)
 
-    # 3. Write out
-    if args['outfile']:
-        outf = open(args['outfile'], "w")
-    else:
-        outf = sys.stdout
-    
-    outf.write(
-        "\t".join(
-            ("UniprotID", "protein_length", "total_idr_length",
-             "fraction_idr", "idrs")) + "\n")
-    for protein in idr_data_available:
-        total_idr = 0
-        for block in blocks[protein]:
-            if not block[1] - block[0] >= args['size']:
-                raise ValueError(
-                    "This block is too small, how did it get here?!: %s" % block)
-            total_idr += (block[1] - block[0])
-        protein_length = sequence_length_idr[protein]
-        fraction_idr = total_idr/protein_length
-        outf.write("\t".join(map(str, (
-            protein, protein_length, total_idr,
-            fraction_idr, len(blocks[protein])))) + "\n")
-
-    #if args['outfile']:
     outf.close()
-
-    #if args['logfile']:
     logfile.close()
 
 if __name__ == "__main__":
