@@ -5,8 +5,12 @@ import numpy as np
 from proteomics import sequence
 
 
-def getDEPeptides(prot_seq, max_expected_length):
-    ''' For a given protein sequence, what are the expected LysC and Tryp peptides'''
+def getDEPeptides(prot_seq, max_expected_length,
+                  min_expected_length=4, return_single_tryp=True):
+    ''' For a given protein sequence, what are the expected LysC and Tryp peptides
+
+    return_single_tryp = return LysC peptides with only a single Trypsin peptide
+    '''
 
     lpep2tpep = collections.defaultdict(list)
     tpep2lpep = collections.defaultdict(list)
@@ -14,16 +18,23 @@ def getDEPeptides(prot_seq, max_expected_length):
 
     for lysc_silica_pep in sequence.iteratePeptides(
             prot_seq, method='lysC', missed_cleavages=0,
-            min_length=4, max_length=float("Inf"), output_last=False,
+            min_length=min_expected_length, max_length=float("Inf"), output_last=False,
             set_iso_to_leucine=True):
 
         if not "R" in lysc_silica_pep[0]:
             continue
 
-        for tryp_silica_pep in sequence.iteratePeptides(
-                lysc_silica_pep[0], method='trypsin', missed_cleavages=1,
-                min_length=4, max_length=max_expected_length, output_last=False):
+        tryp_peps = sequence.iteratePeptides(
+            lysc_silica_pep[0], method='trypsin', missed_cleavages=1,
+            min_length=min_expected_length, max_length=max_expected_length, output_last=False)
 
+        tryp_peps = list(tryp_peps)
+
+        if len(tryp_peps) == 1 and not return_single_tryp:
+            continue
+
+        # if len == 0, loop not entered
+        for tryp_silica_pep in tryp_peps:
             if tryp_silica_pep[0][0] == "M" and tryp_silica_pep[1] == 0:
                 tryp_silica_pep_minus_meth = (
                     tryp_silica_pep[0][1:], tryp_silica_pep[1]+1,
@@ -39,13 +50,15 @@ def getDEPeptides(prot_seq, max_expected_length):
 
     return lpep2tpep, tpep2lpep, tpeps
 
+
 def getDirectEvidence(df, prot2seq, outfile_name,
                       method="conservative",
                       EtOH_FT_threshold=1,
                       Kit_FT_threshold=1,
                       sequential_threshold=None,
                       threshold_method="both",
-                      max_expected_length=100):
+                      max_expected_length=100,
+                      min_expected_length=6):
 
     #threshold_method = one of ["both", "either"]. both = use both thresholds, either = use either threshold
     
@@ -91,7 +104,8 @@ def getDirectEvidence(df, prot2seq, outfile_name,
 
         prot_seq = prot2seq[uniprot_id]
         
-        lpep2tpep, tpep2lpep, tpeps = getDEPeptides(prot_seq, max_expected_length)
+        lpep2tpep, tpep2lpep, tpeps = getDEPeptides(
+            prot_seq, max_expected_length, min_expected_length)
 
         lpep_ignore = set()
 
