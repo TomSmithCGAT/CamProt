@@ -230,3 +230,41 @@ def getDirectEvidence(df, prot2seq, outfile_name,
                     binding_site_seq, method, EtOH_FT_threshold, Kit_FT_threshold))))
 
     outfile.close()
+
+
+def makeProtterInput(df, uniprot_ids, outfile=None):
+    ''' make output which can be loaded into protter
+
+    df = direct_evidence pandas dataframe. This should be filtered
+       beforehand to exclude unwanted sites. Must contain columns:
+       - 'uniprot_id'
+       - 'site_start'
+       - 'site_end'
+    uniprot_id = uniprot_ids of interest
+    outfile = filename for outfile, if None, prints out
+    '''
+    if outfile:
+        out = open(outfile, "w")
+    
+    for uniprot_id in uniprot_ids:#.intersection(consistent_TMT):
+        tmp_df = df[df['uniprot_id']==uniprot_id]
+        
+        if outfile:
+            out.write("%s\t" % uniprot_id)
+        else:
+            print(uniprot_id, end="\t")
+        
+        for start, end in tmp_df[['site_start', 'site_end']].itertuples(index=False):
+            start, end = map(int, (start+1, end))
+            if outfile:
+                out.write("%s-%s," % (start,end))
+            else:
+                print("%s-%s," % (start,end), end="")
+            
+        if outfile:
+            out.write("\n")
+        else:
+            print("\n", end="")
+    
+    if outfile:
+        out = open(outfile, "w")
