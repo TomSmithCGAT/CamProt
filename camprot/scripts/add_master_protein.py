@@ -290,14 +290,17 @@ def main(argv=sys.argv):
                 peptide = row_values[args['pep_column']]
 
                 if args['check_crap']:
-                    add_crap_proteins = [prot for prot in protein2seq if
-                                         (prot in crap_proteins and
-                                          peptide in protein2seq[prot])]
+                    add_crap_proteins = []
+                    for prot in protein2seq:
+                        if prot in crap_proteins:
+                            if peptide.replace("I", "L") in protein2seq[prot]:
+                                add_crap_proteins.append(prot)
                     proteins.extend(add_crap_proteins)
 
                 for protein in proteins:
                     if protein in crap_proteins:
                         associated_crap_proteins.update(proteins)
+
                     if protein not in protein2seq:
                         logfile.write(
                             "protein %s matches peptide %s but is not found "
