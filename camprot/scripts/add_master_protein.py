@@ -1,6 +1,6 @@
-'''annotate_rnp -  assign a unique master to each peptide across
-all samples using a maximum parsimony approachadd information to the output from RNPxl
-=======================================================
+'''add_master_protein -  assign a unique master to each peptide across
+all samples using a maximum parsimony approach
+======================================================================
 
 :Author: Tom Smith, Manasa Ramakrishna
 :Release: $Id$
@@ -286,16 +286,27 @@ def main(argv=sys.argv):
 
                 proteins = row_values[args['matches_column']].split(
                     args['matches_sep'])
+                
+                # rather annoyingly, PD adds "#CONTAM#" to the crap protein ids
+                proteins = [x.replace("#CONTAM#", "") for x in proteins]
 
                 peptide = row_values[args['pep_column']]
 
                 if args['check_crap']:
                     add_crap_proteins = []
-                    for prot in protein2seq:
-                        if prot in crap_proteins:
-                            if peptide.replace("I", "L") in protein2seq[prot]:
-                                add_crap_proteins.append(prot)
+                    for prot in crap_proteins:
+                        if peptide.replace("I", "L") in protein2seq[prot]:
+                            add_crap_proteins.append(prot)
                     proteins.extend(add_crap_proteins)
+                    '''if peptide == "RTPPAGVFYQGWSATPIANGSLGHDIHHPR":
+                        add_all_proteins = []
+                        print(proteins)
+                        for prot in protein2seq:
+                            if peptide.replace("I", "L") in protein2seq[prot]:
+                                add_all_proteins.append(prot)
+                        proteins.extend(add_all_proteins)
+                        print(proteins)
+                        raise ValueError()'''
 
                 for protein in proteins:
                     if protein in crap_proteins:

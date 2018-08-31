@@ -122,8 +122,6 @@ def getDirectEvidence(df, prot2seq, outfile_name,
             pep_seq = pep_seq.replace("I", "L")
             if pep_seq in tpep2lpep :
                 lpep_hits.update(set(tpep2lpep[pep_seq]))
-
-
                 
         # remove lpep also identified from false positive Trypsin peptides
         # note, if method!="conservative", lpep_ignore will be an empty set
