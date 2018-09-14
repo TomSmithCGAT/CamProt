@@ -72,8 +72,9 @@ def main(argv=sys.argv):
     with open(args['outfile'], "w") as outf:
     
         outf.write("%s\n" % "\t".join(
-            ("accession", "swissprot", "fraction_hydrophobic",
-             "fraction_hydrophillic", "free_energy_change", "length")))
+            ["accession", "swissprot", "fraction_hydrophobic",
+             "fraction_hydrophillic", "free_energy_change", "length"] +
+            list(map(chr, range(65, 91)))))
 
         if args['infile'].endswith(".gz"):
             iterator = fasta.FastaIterator(
@@ -102,10 +103,15 @@ def main(argv=sys.argv):
                 print(entry)
                 break
 
+            aa_counts = []
+            for l in map(chr, range(65, 91)):
+                aa_counts.append(entry.sequence.count(l))
+
             outf.write(
-                "%s\n" % "\t".join(map(str, (accession, str(swissprot),
+                "%s\n" % "\t".join(map(str, [accession, str(swissprot),
                                              fractionHydrophobic, fractionHydrophillic,
-                                             freeEnergyChange, str(len(entry.sequence))))))
+                                             freeEnergyChange, str(len(entry.sequence))] +
+                                             aa_counts)))
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
