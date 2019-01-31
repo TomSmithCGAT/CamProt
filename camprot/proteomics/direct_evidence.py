@@ -53,22 +53,62 @@ def getDEPeptides(prot_seq, max_expected_length,
 
 def getDirectEvidence(df, prot2seq, outfile_name,
                       method="conservative",
-                      EtOH_FT_threshold=1,
-                      Kit_FT_threshold=1,
+                      EtOH_threshold=0,
+                      Kit_threshold=0,
+                      EtOH_column="EtOH_FT",
+                      Kit_column="Kit_FT",
+                      EtOH_control_column="Tryp_FT",
+                      Kit_control_column="KitTryp_FT",
                       sequential_threshold=None,
+                      sequential_column="Sequential_FT",
                       threshold_method="both",
                       max_expected_length=100,
                       min_expected_length=6):
 
-    #threshold_method = one of ["both", "either"]. both = use both thresholds, either = use either threshold
+    '''
+    threshold_method = one of ["both", "either", "EtOH", or "Kit"]
+        both = use both thresholds
+        either = use either threshold
+        EtOH = just use EtOH samples
+        Kit = just use RNeasy kit samples
     
-    # conservative method = ignore all LysC peptide where we see any Trpy peptide in EtOH control FT
-    # mid-conservative method = ignore all Trpy peptide also seen in EtOH control FT
-    # relaxed = ignore the EtOH control FT
+    method = one of ["conservative", "mid-conservative", "relaxed"]
+      How to use the control samples?
+        conservative = ignore all LysC peptide where we see any Trpy peptide in the control samples
+        mid-conservative = ignore all Trpy peptide also seen in the control samples
+        relaxed = ignore the EtOH control FT
+
+    sequential_threshold = If peptide seen this many times in the the
+    sequential digestion control (e.g double Typysin) sample, discard
+    it. Defaults to None, e.g no filtering using sequential_threshold
+
+    The "column" options are to specify the names of the input columns
+    for the EtOH and Kit (RNeasy) samples, the controls for EtOH and
+    Kit, and the sequential digestion control.
+    '''
+
     allowed_methods = ["conservative", "mid_conservative", "relaxed"]
-    assert method in allowed_methods, "method must be one of: %s" ",".join(allowed_methods)
+    assert method in allowed_methods, (
+        "method must be one of: %s" ",".join(allowed_methods))
     
+    allowed_threshold_methods = ["both", "either", "EtOH", "Kit"]
+    assert threshold_method in allowed_threshold_methods, (
+        "threshold_method must be one of: %s" ",".join(allowed_threshold_methods))
     
+    if allowed_threshold_methods in ["both", "either"]:
+        assert EtOH_column in df.columns, "%s not in df.columns" % EtOH_column
+        assert Kit_column in df.columns, "%s not in df.columns" % Kit_column
+
+    if allowed_threshold_methods == "EtOH":
+        assert EtOH_column in df.columns, "%s not in df.columns" % EtOH_column
+
+    if allowed_threshold_methods == "Kit":
+        assert Kit_column in df.columns, "%s not in df.columns" % Kit_column
+
+    if sequential_threshold is not None:
+        assert sequential_threshold in df.columns, (
+            "%s not in df.columns" % sequential_threshold)
+
     outfile = open(outfile_name, "w")
     outfile.write("%s\n" % "\t".join(map(str, (
         "uniprot_id", "lysC_pep_ix", "lysC_pep_start", "lysC_pep_end",
@@ -76,31 +116,54 @@ def getDirectEvidence(df, prot2seq, outfile_name,
         "method", "EtOH_FT_threshold", "Kit_FT_threshold"))))
 
     for uniprot_id in set(df['master_protein']):
-        #uniprot_id = 'A2RU67'
         single_prot_df = df[df['master_protein']==uniprot_id]
-        if threshold_method == "both":
-            if method in ["conservative", "mid_conservative"]:
-                test_df = single_prot_df.loc[(single_prot_df["EtOH_FT"] >= EtOH_FT_threshold) &
-                                             (single_prot_df["Tryp_FT"] == 0 ) &
-                                             (single_prot_df["Kit_FT"] >= Kit_FT_threshold) &
-                                             (single_prot_df["KitTryp_FT"] == 0),:]
-            else:
-                test_df = single_prot_df.loc[(single_prot_df["EtOH_FT"] >= EtOH_FT_threshold) &
-                                             (single_prot_df["Kit_FT"] >= Kit_FT_threshold), :]
-        elif threshold_method == "either":
-            if method in ["conservative", "mid_conservative"]:
-                test_df = single_prot_df.loc[((single_prot_df["EtOH_FT"] >= EtOH_FT_threshold) &
-                                              (single_prot_df["Tryp_FT"] == 0)) |
-                                             ((single_prot_df["Kit_FT"] >= Kit_FT_threshold) &
-                                              (single_prot_df["KitTryp_FT"] == 0)), :]
-            else:
-                test_df = single_prot_df.loc[(single_prot_df["EtOH_FT"] >= EtOH_FT_threshold) |
-                                             (single_prot_df["Kit_FT"] >= Kit_FT_threshold),:]
-        else:
-            raise ValueError("threshold method must be one of ['both', 'either']")
 
-        if sequential_threshold:
-            test_df = test_df.loc[test_df['Sequential_FT'] == 0, :]
+        if threshold_method == "both":
+
+            if method in ["conservative", "mid_conservative"]:
+                test_df = single_prot_df.loc[
+                    (single_prot_df[EtOH_column] >= EtOH_FT_threshold) &
+                    (single_prot_df[EtOH_control_column] == 0 ) &
+                    (single_prot_df[Kit_column] >= Kit_FT_threshold) &
+                    (single_prot_df[Kit_control_column] == 0),:]
+            else:
+                test_df = single_prot_df.loc[
+                    (single_prot_df[EtOH_column] >= EtOH_FT_threshold) &
+                    (single_prot_df[Kit_column] >= Kit_FT_threshold), :]
+
+        elif threshold_method == "either":
+
+            if method in ["conservative", "mid_conservative"]:
+                test_df = single_prot_df.loc[
+                    ((single_prot_df[EtOH_column] >= EtOH_FT_threshold) &
+                     (single_prot_df[EtOH_control_column] == 0)) |
+                    ((single_prot_df[Kit_column] >= Kit_FT_threshold) &
+                     (single_prot_df[Kit_control_column] == 0)), :]
+            else:
+                test_df = single_prot_df.loc[
+                    (single_prot_df[EtOH_column] >= EtOH_FT_threshold) |
+                    (single_prot_df[Kit_column] >= Kit_FT_threshold),:]
+
+        elif threshold_method == "EtOH":
+            if method in ["conservative", "mid_conservative"]:
+                test_df = single_prot_df.loc[
+                    ((single_prot_df[EtOH_column] >= EtOH_FT_threshold) &
+                     (single_prot_df[EtOH_control_column] == 0)), :]
+            else:
+                test_df = single_prot_df.loc[
+                    (single_prot_df[EtOH_column] >= EtOH_FT_threshold),:]
+
+        elif threshold_method == "Kit":
+            if method in ["conservative", "mid_conservative"]:
+                test_df = single_prot_df.loc[
+                    ((single_prot_df[Kit_column] >= Kit_FT_threshold) &
+                     (single_prot_df[Kit_control_column] == 0)), :]
+            else:
+                test_df = single_prot_df.loc[
+                    (single_prot_df[Kit_column] >= Kit_FT_threshold),:]
+
+        if sequential_threshold is not None:
+            test_df = test_df.loc[test_df[sequential_column] < sequential_threshold, :]
 
         prot_seq = prot2seq[uniprot_id]
         
@@ -109,9 +172,23 @@ def getDirectEvidence(df, prot2seq, outfile_name,
 
         lpep_ignore = set()
 
+        # If we're using the conservative method, we need to identify
+        # the complete lysC peptide and remove it from the analysis
         if method == "conservative":
-            false_positive_df = single_prot_df[
-                (single_prot_df["Tryp_FT"] > 0) | (single_prot_df["KitTryp_FT"] > 0)]
+
+            if threshold_method in ["both", "either"]:
+                false_positive_df = single_prot_df[
+                    (single_prot_df[EtOH_control_column] > 0) |
+                    (single_prot_df[Kit_control_column] > 0)]
+
+            elif threshold_method == "EtOH":
+                false_positive_df = single_prot_df[
+                    single_prot_df[EtOH_control_column] > 0]
+
+            elif threshold_method == "Kit":
+                false_positive_df = single_prot_df[
+                    single_prot_df[Kit_control_column] > 0]
+
             for pep_seq in false_positive_df['Sequence']:
                 pep_seq = pep_seq.replace("I", "L") 
                 if pep_seq in tpep2lpep.keys():
@@ -125,6 +202,7 @@ def getDirectEvidence(df, prot2seq, outfile_name,
                 
         # remove lpep also identified from false positive Trypsin peptides
         # note, if method!="conservative", lpep_ignore will be an empty set
+        # so line as no effect
         lpep_hits = lpep_hits.difference(lpep_ignore)
 
         prot_hits = np.zeros(len(prot_seq), dtype=bool)
@@ -165,14 +243,10 @@ def getDirectEvidence(df, prot2seq, outfile_name,
 
         for ix, l_pep in enumerate(lpep_hits):
             pep_aa_hits = prot_hits[l_pep[1]: l_pep[2]]
-
-            
-                
             
             if l_pep[1] == 0 and pep_aa_hits[1] == 0:
                 pep_aa_hits[0] = 0
 
-    
             if sum(pep_aa_hits)== 0:
                 if l_pep[0] in single_tryp_cover:
                     binding_site_type = "Single Tryp Pep Cover"
@@ -183,8 +257,10 @@ def getDirectEvidence(df, prot2seq, outfile_name,
                 binding_site_seq = prot_seq[site_start:site_end+1]
                 
                 outfile.write("%s\n" % "\t".join(map(str, (
-                    uniprot_id, ix, l_pep[1], l_pep[2], binding_site_type, site_start, site_end+1,
-                    binding_site_seq, method, EtOH_FT_threshold, Kit_FT_threshold))))
+                    uniprot_id, ix, l_pep[1], l_pep[2],
+                    binding_site_type, site_start, site_end+1,
+                    binding_site_seq, method, EtOH_FT_threshold,
+                    Kit_FT_threshold))))
 
                 continue
 
@@ -197,8 +273,10 @@ def getDirectEvidence(df, prot2seq, outfile_name,
                 binding_site_seq = prot_seq[site_start:site_end+1]
                 
                 outfile.write("%s\n" % "\t".join(map(str, (
-                    uniprot_id, ix, l_pep[1], l_pep[2], binding_site_type, site_start, site_end+1,
-                    binding_site_seq, method, EtOH_FT_threshold, Kit_FT_threshold))))
+                    uniprot_id, ix, l_pep[1], l_pep[2],
+                    binding_site_type, site_start, site_end+1,
+                    binding_site_seq, method, EtOH_FT_threshold,
+                    Kit_FT_threshold))))
                 continue
                 
             else:
@@ -224,8 +302,10 @@ def getDirectEvidence(df, prot2seq, outfile_name,
                 site_start, site_end = binding_site
                 binding_site_seq = prot_seq[site_start:site_end+1]
                 outfile.write("%s\n" % "\t".join(map(str, (
-                    uniprot_id, ix, l_pep[1], l_pep[2], binding_site_type, site_start, site_end+1,
-                    binding_site_seq, method, EtOH_FT_threshold, Kit_FT_threshold))))
+                    uniprot_id, ix, l_pep[1], l_pep[2],
+                    binding_site_type, site_start, site_end+1,
+                    binding_site_seq, method, EtOH_FT_threshold,
+                    Kit_FT_threshold))))
 
     outfile.close()
 
