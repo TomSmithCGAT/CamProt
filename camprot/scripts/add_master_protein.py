@@ -542,17 +542,32 @@ def main(argv=sys.argv):
         peptide_end = []
 
         for ix, row in peptide_df.iterrows():
-            proteins = row['master_protein'].split(";")
-            pep_sequence = row['Sequence'].upper().replace("I", "L").replace("X", "L")
 
-            if proteins == [""]:
+            proteins = row['master_protein'].split(";")
+            
+            # weird quirk of some PD output, cRAP proteins id =
+            # "sp". E.g lose track of which cRAP protein matched
+            # need to catch this first as proteins will be ""
+            if row[args['matches_column']] == "sp":
+                protein_lengths.append("")
+                protein_descriptions.append("")
+                crap_protein.append(1)
+                associated_crap_protein.append("")
+                peptide_start.append("")
+                peptide_end.append("")
+
+            elif proteins == [""]:
                 protein_lengths.append("")
                 protein_descriptions.append("")
                 crap_protein.append("")
                 associated_crap_protein.append("")
                 peptide_start.append("")
                 peptide_end.append("")
+
             else:
+
+                pep_sequence = row['Sequence'].upper().replace("I", "L").replace("X", "L")
+            
                 protein_lengths.append(
                     ";".join(map(str, [len(protein2seq[x]) for x in proteins])))
                 protein_descriptions.append(
