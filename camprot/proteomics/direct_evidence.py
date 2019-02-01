@@ -53,8 +53,8 @@ def getDEPeptides(prot_seq, max_expected_length,
 
 def getDirectEvidence(df, prot2seq, outfile_name,
                       method="conservative",
-                      EtOH_threshold=0,
-                      Kit_threshold=0,
+                      EtOH_FT_threshold=0,
+                      Kit_FT_threshold=0,
                       EtOH_column="EtOH_FT",
                       Kit_column="Kit_FT",
                       EtOH_control_column="Tryp_FT",
@@ -106,8 +106,8 @@ def getDirectEvidence(df, prot2seq, outfile_name,
         assert Kit_column in df.columns, "%s not in df.columns" % Kit_column
 
     if sequential_threshold is not None:
-        assert sequential_threshold in df.columns, (
-            "%s not in df.columns" % sequential_threshold)
+        assert sequential_column in df.columns, (
+            "%s not in df.columns" % sequential_column)
 
     outfile = open(outfile_name, "w")
     outfile.write("%s\n" % "\t".join(map(str, (
