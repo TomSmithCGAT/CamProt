@@ -2,19 +2,13 @@ import sys
 import os
 import glob
 
+from camprot import __version__
 from ez_setup import use_setuptools
 use_setuptools("10.0")
 import setuptools
 
 from setuptools import setup, Extension, find_packages
 
-########################################################################
-########################################################################
-# collect camprot version
-def getVersion():
-    return "0.0.13"
-
-version = getVersion()
 
 ###############################################################
 ###############################################################
@@ -32,7 +26,11 @@ camprot_package_dirs = {'camprot': 'camprot'}
 install_requires = [
     "urllib3>=1.0",
     "pandas>=0.12.0",
-    "requests>=2.0"]
+    "bioservices",
+    "rpy2",
+    "numpy",
+    "requests",
+    "urllib3"]
 
 ##########################################################
 ##########################################################
@@ -54,7 +52,7 @@ Operating System :: Microsoft
 setup(
     # package information
     name='camprot',
-    version=version,
+    version=__version__,
     description='camprot: Tools for Computational proteomics',
     author='Tom Smith',
     author_email='tss38@cam.ac.uk',
@@ -64,7 +62,7 @@ setup(
     long_description='camprot: Scripts and modules for computational proteomics',
     classifiers=list(filter(None, classifiers.split("\n"))),
     url="https://github.com/TomSmithCGAT/CamProt",
-    download_url="https://github.com/TomSmithCGAT/CamProt/tarball/%s" % version,
+    download_url="https://github.com/TomSmithCGAT/CamProt/tarball/%s" % __version__,
     # package contents
     packages=camprot_packages,
     package_dir=camprot_package_dirs,
