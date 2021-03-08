@@ -39,8 +39,8 @@ import datetime
 
 from bioservices import UniProt
 
-from proteomics import d2p2
-from proteomics import protinfo
+from camprot.proteomics import d2p2
+from camprot.proteomics import protinfo
 
 
 def writeSectionHeader(logfile, section_header):
