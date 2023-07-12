@@ -130,7 +130,7 @@ def main(argv=sys.argv):
 
     start_time = datetime.datetime.now()
 
-    for d2p2_entry in d2p2.iterator(uniprot_ids, chunk_size=50):
+    for d2p2_entry in d2p2.iterator(uniprot_ids):
 
         d2p2_entry.rebuildConsensus(
             tools_whitelist=args['whitelist'],

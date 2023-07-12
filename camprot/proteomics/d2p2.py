@@ -16,6 +16,7 @@ Code
 '''
 
 import urllib3
+import requests
 import json
 import collections
 
@@ -105,8 +106,11 @@ def getChunks(uniprot_ids, chunk_size=250):
         chunk_ids = list(uniprot_ids)[chunk_start: (chunk_start + chunk_size)]
 
         url = '%s/["%s"]' % (d2p2_url, '","'.join(chunk_ids))
-        request = http.request('GET', url=url)
-        response = json.loads(request.data.decode('utf8'))
+        
+        #request = http.request('GET', url=url, verify=False)
+        #response = json.loads(request.data.decode('utf8'))
+        request = requests.get(url, verify=False)
+        response = json.loads(request.text)
 
         yield response
 
